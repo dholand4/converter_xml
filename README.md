@@ -1,54 +1,60 @@
-# React + TypeScript + Vite
+## Indice
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+- [Sobre](#-sobre)
+- [Preview do projeto](#-preview-do-projeto)
+- [Tecnologias utilizadas](#-tecnologias-utilizadas)
+- [Funcionalidades](#-Funcionalidades)
+- [Como baixar o projeto](#-como-baixar-o-projeto)
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🤔 Sobre
 
-## Expanding the ESLint configuration
+Projeto **Converter XML**, Projeto desenvolvido para facilitar no cadastro de questionarios dentro da plataforma Moodle. 
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+---
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+## 📱 Preview do projeto
+- Link do Projeto: https://dholand4.github.io/converter_xml/
+<div align="center">
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+  <img style="margin: 5px" alt="image-taco" src="https://i.imgur.com/KhGB1yK.png" width="1122">
+</div>
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+---
 
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
+## 💻 Tecnologias utilizadas
+
+O projeto foi feito utilizando das seguintes tecnologias
+
+- Vite
+- React
+- Styled-Components
+- Typescript
+
+---
+
+## 💻 Funcionalidades
+
+- Geração de Arquivos XML<br>
+Sistema responsável por criar arquivos XML personalizados para importação de questionários na plataforma Moodle.
+
+---
+
+## 📦 Como baixar o projeto
+
+```bash
+  #clonar o repositorio
+  $ git clone https://github.com/dholand4/converter_xml.git
+
+  #entrar na pasta do projeto
+  $ cd converter_xml
+
+  #instalar as dependencias
+  $ yarn
+
+  #Basta ler o QR CODE, com isso o projeto deverá abrir
+  $ yarn dev
+
+
 ```
