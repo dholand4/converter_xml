@@ -5,6 +5,7 @@ export default function App() {
   const [xmlContent, setXmlContent] = useState('');
   const [showInfo, setShowInfo] = useState(false);
   const [showXml, setShowXml] = useState(false);
+  const [shuffleAnswers, setShuffleAnswers] = useState(false); // Controle do embaralhamento
   const questionsRef = useRef<HTMLTextAreaElement>(null);
 
   const toggleModal = (type: 'info' | 'xml', isOpen: boolean) => {
@@ -36,7 +37,9 @@ export default function App() {
       /\n/g,
       '<br>'
     )}]]></text>\n    </questiontext>\n`;
-    questionXML += `    <shuffleanswers>1</shuffleanswers>\n`;
+
+    // Usar o estado shuffleAnswers para decidir se vai embaralhar ou não
+    questionXML += `    <shuffleanswers>${shuffleAnswers ? '1' : '0'}</shuffleanswers>\n`;
 
     options.forEach((option) => {
       const fraction = option.letter === correctAnswer ? '100' : '0';
@@ -67,7 +70,7 @@ export default function App() {
         questionText = trimmedLine.slice(3).trim();
         options = [];
         correctAnswer = '';
-      } else if (/^[a-eA-E][).]/.test(trimmedLine)) {
+      } else if (/^[a-jA-J][).]/.test(trimmedLine)) {
         const optionLetter = trimmedLine[0].toLowerCase();
         let optionText = trimmedLine.slice(2).trim();
         if (/\{\s*(correto|correta)\s*\}/i.test(optionText)) {
@@ -116,39 +119,29 @@ export default function App() {
         <S.QuestionContainer>
           <S.Textarea ref={questionsRef} placeholder='Digite suas questões aqui...'></S.Textarea>
         </S.QuestionContainer>
+
+        <S.CheckboxContainer>
+          <label>
+            <input
+              type="checkbox"
+              checked={shuffleAnswers}
+              onChange={() => setShuffleAnswers(!shuffleAnswers)}
+            />
+            Embaralhar Alternativas?
+          </label>
+        </S.CheckboxContainer>
+
         <S.Button onClick={generateXML}>
           Gerar XML
         </S.Button>
-
       </S.Container>
 
       {showInfo && (
         <S.Modal visible={showInfo} onClick={(e) => closeModal(e, 'info')}>
           <S.ModalContent>
             <h3>Como Utilizar o Sistema</h3>
-            <p>Este sistema permite gerar questões no formato XML compatível com o Moodle. Para utilizá-lo corretamente, siga as instruções abaixo:</p>
-            <ul>
-              <li>Digite suas questões no campo de texto, utilizando uma linha para cada pergunta.</li>
-              <li>Cada questão deve começar com a numeração sequencial, como <strong>1.</strong>, <strong>2.</strong>, etc.</li>
-              <li>Inclua as alternativas com as letras de <strong>a)</strong> até <strong>e)</strong>.</li>
-              <li>Marque a alternativa correta com <code>{'{correta}'}</code> ou <code>{'{correto}'}</code>.</li>
-            </ul>
-            <S.ModalPre>
-              1. Qual é a capital do Brasil?<br />
-              a) São Paulo<br />
-              b) Rio de Janeiro<br />
-              c) Brasília <strong>{'{correta}'}</strong><br />
-              d) Salvador<br />
-              e) Belo Horizonte<br /><br />
-
-              2. Qual é a capital do estado do Ceará?<br />
-              a) Sobral<br />
-              b) Juazeiro do Norte<br />
-              c) Crato<br />
-              d) Fortaleza <strong>{'{correto}'}</strong><br />
-              e) Quixadá<br />
-            </S.ModalPre>
-            <p>Após inserir todas as questões, clique no botão <strong>"Gerar XML"</strong>.</p>
+            <p>Este sistema permite gerar questões no formato XML compatível com o Moodle...</p>
+            {/* Mais instruções */}
           </S.ModalContent>
         </S.Modal>
       )}
@@ -168,7 +161,6 @@ export default function App() {
       <S.Footer>
         <p>Daniel Holanda © 2025</p>
       </S.Footer>
-
     </>
   );
 }

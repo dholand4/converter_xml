@@ -15,7 +15,6 @@ export const Container = styled.div`
   width: 1000px;
   border-radius: 25px;
   height: 500px;
-  
 `;
 
 export const Title = styled.h1`
@@ -104,7 +103,6 @@ export const Button = styled.button`
 
 export const Buttoninfo = styled.button`
   color: #0d47a1;
-
   font-size: 1.5rem;
   border: none;
   border-radius: 30px;
@@ -133,7 +131,6 @@ export const Modal = styled.div<ModalProps>`
   display: ${({ visible }) => (visible ? 'flex' : 'none')};
   position: fixed;
   z-index: 1000;
-  /* padding-top: 80px; */
   left: 0;
   top: 0;
   width: 100%;
@@ -206,7 +203,6 @@ export const ModalPre = styled.div`
   overflow-x: auto;
 `;
 
-
 export const Footer = styled.footer`
   color: #075192;
   text-align: center;
@@ -229,3 +225,19 @@ export const XmlBox = styled.pre`
   overflow-y: auto;
 `;
 
+export const CheckboxContainer = styled.div`
+  display: flex;
+  align-items: center;
+`;
+
+export const CheckboxLabel = styled.label`
+  font-size: 1rem;
+  color: #333;
+  margin-left: 10px;
+`;
+
+export const CheckboxInput = styled.input`
+  cursor: pointer;
+  transform: scale(1.2);
+  margin-right: 10px;
+`;
