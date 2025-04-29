@@ -140,8 +140,29 @@ export default function App() {
         <S.Modal visible={showInfo} onClick={(e) => closeModal(e, 'info')}>
           <S.ModalContent>
             <h3>Como Utilizar o Sistema</h3>
-            <p>Este sistema permite gerar questões no formato XML compatível com o Moodle...</p>
-            {/* Mais instruções */}
+            <p>Este sistema permite gerar questões no formato XML compatível com o Moodle. Para utilizá-lo corretamente, siga as instruções abaixo:</p>
+            <ul>
+              <li>Digite suas questões no campo de texto, utilizando uma linha para cada pergunta.</li>
+              <li>Cada questão deve começar com a numeração sequencial, como <strong>1.</strong>, <strong>2.</strong>, etc.</li>
+              <li>Inclua as alternativas com as letras de <strong>a)</strong> até <strong>e)</strong>.</li>
+              <li>Marque a alternativa correta com <code>{'{correta}'}</code> ou <code>{'{correto}'}</code>.</li>
+            </ul>
+            <S.ModalPre>
+              1. Qual é a capital do Brasil?<br />
+              a) São Paulo<br />
+              b) Rio de Janeiro<br />
+              c) Brasília <strong>{'{correta}'}</strong><br />
+              d) Salvador<br />
+              e) Belo Horizonte<br /><br />
+
+              2. Qual é a capital do estado do Ceará?<br />
+              a) Sobral<br />
+              b) Juazeiro do Norte<br />
+              c) Crato<br />
+              d) Fortaleza <strong>{'{correto}'}</strong><br />
+              e) Quixadá<br />
+            </S.ModalPre>
+            <p>Após inserir todas as questões, clique no botão <strong>"Gerar XML"</strong>.</p>
           </S.ModalContent>
         </S.Modal>
       )}
