@@ -161,12 +161,13 @@ export const ModalContent = styled.div`
     color: #1a237e;
     font-size: 1.7rem;
     font-weight: 600;
+    margin-bottom: 0.5px;
   }
 
   .actions {
     display: flex;
     gap: 10px;
-    margin-top: 20px;
+    margin-top: -12px;
 
     .btn {
       background: linear-gradient(to right, #3f51b5, #1a237e);
@@ -212,7 +213,7 @@ export const Footer = styled.footer`
 `;
 
 export const XmlBox = styled.pre`
-  background-color: #f5f5f5;
+  background-color:rgb(189, 212, 231);
   padding: 20px;
   border-radius: 8px;
   font-size: 1rem;
@@ -220,7 +221,7 @@ export const XmlBox = styled.pre`
   overflow-x: auto;
   white-space: pre-wrap;
   word-wrap: break-word;
-  margin-top: 20px;
+  margin-top: 30px;
   max-height: 50vh;
   overflow-y: auto;
 `;
