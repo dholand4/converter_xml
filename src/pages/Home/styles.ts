@@ -85,6 +85,7 @@ export const Button = styled.button`
   margin-top: 20px;
   font-weight: 500;
   width: 80%;
+  margin-bottom: 10PX;
 
   &:hover {
     background: linear-gradient(135deg, #1565c0, #0d47a1);
@@ -241,4 +242,38 @@ export const CheckboxInput = styled.input`
   cursor: pointer;
   transform: scale(1.2);
   margin-right: 10px;
+`;
+
+export const ImagePreview = styled.div`
+  position: fixed;
+  z-index: 9999;
+  border: 1px solid #ccc;
+  background: #fff;
+  padding: 4px;
+  border-radius: 4px;
+  pointer-events: none;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+`;
+
+export const ImageUploadContainer = styled.div`
+  margin-bottom: 15px;
+  label {
+    display: inline-block;
+    background-color: #0056b3;
+    color: #fff;
+    padding: 8px 14px;
+  border-radius: 30px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background 0.2s ease;
+    font-size: 14px;
+  }
+
+  label:hover {
+    background-color: #007bff;
+  }
+
+  input[type='file'] {
+    display: none;
+  }
 `;

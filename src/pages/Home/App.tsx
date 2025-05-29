@@ -1,14 +1,54 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import * as S from './styles';
 
 export default function App() {
   const [xmlContent, setXmlContent] = useState('');
   const [showInfo, setShowInfo] = useState(false);
   const [showXml, setShowXml] = useState(false);
-  const [shuffleAnswers, setShuffleAnswers] = useState(false); // Controle do embaralhamento
+  const [shuffleAnswers, setShuffleAnswers] = useState(false);
   const questionsRef = useRef<HTMLTextAreaElement>(null);
   const [questionStats, setQuestionStats] = useState({ total: 0, semCorreta: 0 });
 
+  const imageMapRef = useRef<{ [key: string]: string }>({});
+  const imageCounterRef = useRef<number>(1);
+
+  const [hoveredImage, setHoveredImage] = useState<string | null>(null);
+  const [previewPos, setPreviewPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+
+  useEffect(() => {
+    const textarea = questionsRef.current;
+    if (!textarea) return;
+
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (const item of items) {
+        if (item.type.startsWith('image')) {
+          e.preventDefault(); // bloqueia a imagem de aparecer direto
+
+          const file = item.getAsFile();
+          if (!file) return;
+
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const base64 = reader.result as string;
+            const imageId = `imagem${imageCounterRef.current}`;
+            imageMapRef.current[imageId] = base64;
+            insertAtCursor(`[${imageId}]`);
+            imageCounterRef.current += 1;
+          };
+          reader.readAsDataURL(file);
+          break;
+        }
+      }
+    };
+
+    textarea.addEventListener('paste', handlePaste as EventListener);
+    return () => {
+      textarea.removeEventListener('paste', handlePaste as EventListener);
+    };
+  }, []);
 
 
   const toggleModal = (type: 'info' | 'xml', isOpen: boolean) => {
@@ -21,12 +61,7 @@ export default function App() {
   };
 
   const escapeXML = (str: string) =>
-    str
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&apos;');
+    str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
 
   const generateQuestionXML = (
     questionText: string,
@@ -34,14 +69,14 @@ export default function App() {
     correctAnswer: string,
     count: number
   ) => {
+    const resolvedQuestionText = questionText.replace(/\[imagem(\d+)\]/gi, (_, num) => {
+      const key = `imagem${num}`;
+      return imageMapRef.current[key] ? `<img src="${imageMapRef.current[key]}" /><br>` : `[imagem${num}]`;
+    });
+
     let questionXML = `  <question type="multichoice">\n`;
     questionXML += `    <name><text>Q${count}</text></name>\n`;
-    questionXML += `    <questiontext format="html">\n      <text><![CDATA[${questionText.replace(
-      /\n/g,
-      '<br>'
-    )}]]></text>\n    </questiontext>\n`;
-
-    // Usar o estado shuffleAnswers para decidir se vai embaralhar ou não
+    questionXML += `    <questiontext format="html">\n      <text><![CDATA[${resolvedQuestionText.replace(/\n/g, '<br>')}]]></text>\n    </questiontext>\n`;
     questionXML += `    <shuffleanswers>${shuffleAnswers ? '1' : '0'}</shuffleanswers>\n`;
 
     options.forEach((option) => {
@@ -55,10 +90,7 @@ export default function App() {
 
   const generateXML = () => {
     const inputText = questionsRef.current?.value || '';
-    const questionsArray = inputText
-      .split('\n')
-      .map((line) => line.trim())
-      .filter((line) => line !== '');
+    const questionsArray = inputText.split('\n').map((line) => line.trim()).filter((line) => line !== '');
 
     let xmlOutput = '<?xml version="1.0" encoding="UTF-8"?>\n<quiz>\n';
     let questionCount = 1;
@@ -111,8 +143,6 @@ export default function App() {
     toggleModal('xml', true);
   };
 
-
-
   const copyText = () => {
     navigator.clipboard
       .writeText(xmlContent)
@@ -128,18 +158,100 @@ export default function App() {
     link.click();
   };
 
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result as string;
+      const imageId = `imagem${imageCounterRef.current}`;
+      imageMapRef.current[imageId] = base64;
+      insertAtCursor(`[${imageId}]`);
+      imageCounterRef.current += 1;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const insertAtCursor = (text: string) => {
+    const textarea = questionsRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const currentText = textarea.value;
+
+    textarea.value = currentText.substring(0, start) + text + currentText.substring(end);
+    textarea.selectionStart = textarea.selectionEnd = start + text.length;
+    textarea.focus();
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLTextAreaElement>) => {
+    const textarea = questionsRef.current;
+    if (!textarea) return;
+
+    const { top, left } = textarea.getBoundingClientRect();
+    const x = e.clientX - left;
+    const y = e.clientY - top;
+    const pos = textarea.selectionStart;
+
+    const content = textarea.value;
+    const match = content.match(/\[imagem(\d+)\]/gi);
+    if (!match) return setHoveredImage(null);
+
+    for (const tag of match) {
+      const index = content.indexOf(tag);
+      const rangeStart = index;
+      const rangeEnd = index + tag.length;
+
+      if (pos >= rangeStart && pos <= rangeEnd) {
+        const key = tag.replace('[', '').replace(']', '');
+        if (imageMapRef.current[key]) {
+          setHoveredImage(imageMapRef.current[key]);
+          setPreviewPos({ top: e.clientY + 10, left: e.clientX + 10 });
+        }
+        return;
+      }
+    }
+
+    setHoveredImage(null);
+  };
+
   return (
     <>
       <S.Container>
         <S.Title>
           Gerador de Questões para Moodle (Formato XML)
-          <S.Buttoninfo onClick={() => toggleModal('info', true)}>
-            ⓘ
-          </S.Buttoninfo>
+          <S.Buttoninfo onClick={() => toggleModal('info', true)}>ⓘ</S.Buttoninfo>
         </S.Title>
+
         <S.QuestionContainer>
-          <S.Textarea ref={questionsRef} placeholder='Digite suas questões aqui...'></S.Textarea>
+          <S.Textarea
+            ref={questionsRef}
+            placeholder="Digite suas questões aqui..."
+            onMouseMove={handleMouseMove}
+          />
         </S.QuestionContainer>
+
+        {hoveredImage && (
+          <S.ImagePreview style={{ top: previewPos.top, left: previewPos.left }}>
+            <img src={hoveredImage} alt="Preview" style={{ maxWidth: 200, maxHeight: 200 }} />
+          </S.ImagePreview>
+        )}
+
+
+        <S.ImageUploadContainer>
+          <label htmlFor="image-upload">
+            Inserir Imagem
+          </label>
+          <input
+            id="image-upload"
+            type="file"
+            accept="image/*"
+            onChange={handleImageUpload}
+          />
+        </S.ImageUploadContainer>
+
 
         <S.CheckboxContainer>
           <label>
@@ -152,9 +264,8 @@ export default function App() {
           </label>
         </S.CheckboxContainer>
 
-        <S.Button onClick={generateXML}>
-          Gerar XML
-        </S.Button>
+
+        <S.Button onClick={generateXML}>Gerar XML</S.Button>
       </S.Container>
 
       {showInfo && (
@@ -199,21 +310,17 @@ export default function App() {
             <h3>XML Gerado:</h3>
             <p>
               ✅ {questionStats.total} Questões Geradas!
-              {questionStats.semCorreta > 0 && (
-                <> | ⚠️ {questionStats.semCorreta} Questões sem Alternativa Correta</>
-              )}
+              {questionStats.semCorreta > 0 && <> | ⚠️ {questionStats.semCorreta} Questões sem Alternativa Correta</>}
             </p>
             <div className="actions">
               <S.Button onClick={copyText}>Copiar Texto</S.Button>
               <S.Button onClick={downloadXML}>Baixar XML</S.Button>
             </div>
             <S.XmlBox>{xmlContent}</S.XmlBox>
-
           </S.ModalContent>
         </S.Modal>
-
-
       )}
+
       <S.Footer>
         <p>Daniel Holanda © 2025</p>
       </S.Footer>
