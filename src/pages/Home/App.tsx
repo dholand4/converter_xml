@@ -190,9 +190,7 @@ export default function App() {
     const textarea = questionsRef.current;
     if (!textarea) return;
 
-    const { top, left } = textarea.getBoundingClientRect();
-    const x = e.clientX - left;
-    const y = e.clientY - top;
+
     const pos = textarea.selectionStart;
 
     const content = textarea.value;
