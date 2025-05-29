@@ -112,13 +112,12 @@ export default function App() {
           totalQuestions++;
           questionCount++;
         }
-        questionText = trimmedLine.slice(3).trim();
+        questionText = trimmedLine.slice(3).trim(); // só a pergunta
         options = [];
         correctAnswer = '';
         isReadingAlternatives = false;
-      } else if (trimmedLine.toUpperCase() === 'ALTERNATIVAS:') {
+      } else if (/^[aA][).]\s+/.test(trimmedLine)) {
         isReadingAlternatives = true;
-      } else if (isReadingAlternatives && /^[a-jA-J][).]/.test(trimmedLine)) {
         const optionLetter = trimmedLine[0].toLowerCase();
         let optionText = trimmedLine.slice(2).trim();
         if (/\{\s*(correto|correta)\s*\}/i.test(optionText)) {
@@ -126,11 +125,24 @@ export default function App() {
           optionText = optionText.replace(/\{\s*(correto|correta)\s*\}/i, '').trim();
         }
         options.push({ letter: optionLetter, text: escapeXML(optionText) });
-      } else {
+      } else if (
+        isReadingAlternatives &&
+        /^[b-jB-J][).]\s+/.test(trimmedLine)
+      ) {
+        const optionLetter = trimmedLine[0].toLowerCase();
+        let optionText = trimmedLine.slice(2).trim();
+        if (/\{\s*(correto|correta)\s*\}/i.test(optionText)) {
+          correctAnswer = optionLetter;
+          optionText = optionText.replace(/\{\s*(correto|correta)\s*\}/i, '').trim();
+        }
+        options.push({ letter: optionLetter, text: escapeXML(optionText) });
+      } else if (!isReadingAlternatives) {
         questionText += (questionText ? '\n' : '') + trimmedLine;
       }
     });
 
+
+    // Finaliza última questão
     if (questionText) {
       xmlOutput += generateQuestionXML(questionText, options, correctAnswer, questionCount);
       if (!correctAnswer) semCorreta++;
@@ -142,6 +154,7 @@ export default function App() {
     setQuestionStats({ total: totalQuestions, semCorreta });
     toggleModal('xml', true);
   };
+
 
   const copyText = () => {
     navigator.clipboard
@@ -274,7 +287,7 @@ export default function App() {
             <ul>
               <li>Digite suas questões no campo de texto, utilizando uma linha para cada pergunta.</li>
               <li>Cada questão deve começar com a numeração sequencial, como <strong>1.</strong>, <strong>2.</strong>, etc.</li>
-              <li>Antes de listar as alternativas, adicione uma linha com <strong>ALTERNATIVAS:</strong> para separar o enunciado das opções.</li>
+              {/* <li>Antes de listar as alternativas, adicione uma linha com <strong>ALTERNATIVAS:</strong> para separar o enunciado das opções.</li> */}
               <li>Inclua as alternativas utilizando letras de <strong>a)</strong> em diante. Você pode usar quantas alternativas desejar, desde que cada uma siga o formato <code>a)</code>, <code>b)</code>, <code>c)</code>, etc.</li>
 
               <li>Marque a alternativa correta com <code>{'{correta}'}</code> ou <code>{'{correto}'}</code>.</li>
@@ -282,7 +295,7 @@ export default function App() {
 
             <S.ModalPre>
               1. Qual é a capital do Brasil?<br />
-              ALTERNATIVAS:<br />
+              {/* ALTERNATIVAS:<br /> */}
               a) São Paulo<br />
               b) Rio de Janeiro<br />
               c) Brasília <strong>{'{correta}'}</strong><br />
@@ -290,7 +303,7 @@ export default function App() {
               e) Belo Horizonte<br /><br />
 
               2. Qual é a capital do estado do Ceará?<br />
-              ALTERNATIVAS:<br />
+              {/* ALTERNATIVAS:<br /> */}
               a) Sobral<br />
               b) Juazeiro do Norte<br />
               c) Crato<br />
