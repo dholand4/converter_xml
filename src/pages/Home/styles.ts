@@ -10,11 +10,11 @@ export const Container = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 0 20px;
+  justify-content: flex-start; /* Começa pelo topo, não mais centralizando verticalmente */
+  padding: 20px;               /* Mantém um padding interno */
   width: 1000px;
   border-radius: 25px;
-  height: 500px;
+  /* REMOVIDA A ALTURA FIXA PARA DEIXAR O CONTAINER SE AJUSTAR AO TEXTO */
 `;
 
 export const Title = styled.h1`
@@ -53,13 +53,14 @@ export const QuestionContainer = styled.div`
 
 export const Textarea = styled.textarea`
   width: 900px;
-  height: 200px;
+  min-height: 200px;       /* Altura mínima */
+  max-height: none;        /* Sem limite máximo */
   border-radius: 10px;
   border: 1px solid #90caf9;
   padding: 12px;
   font-size: 1.1rem;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  resize: none;
+  resize: vertical;        /* Permite redimensionar manualmente na vertical */
   transition: border 0.3s ease, box-shadow 0.3s ease;
 
   &:focus {
@@ -85,7 +86,7 @@ export const Button = styled.button`
   margin-top: 20px;
   font-weight: 500;
   width: 80%;
-  margin-bottom: 10PX;
+  margin-bottom: 10px;
 
   &:hover {
     background: linear-gradient(135deg, #1565c0, #0d47a1);
@@ -214,7 +215,7 @@ export const Footer = styled.footer`
 `;
 
 export const XmlBox = styled.pre`
-  background-color:rgb(189, 212, 231);
+  background-color: rgb(189, 212, 231);
   padding: 20px;
   border-radius: 8px;
   font-size: 1rem;
@@ -252,7 +253,7 @@ export const ImagePreview = styled.div`
   padding: 4px;
   border-radius: 4px;
   pointer-events: none;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 `;
 
 export const ImageUploadContainer = styled.div`
@@ -262,7 +263,7 @@ export const ImageUploadContainer = styled.div`
     background-color: #0056b3;
     color: #fff;
     padding: 8px 14px;
-  border-radius: 30px;
+    border-radius: 30px;
     cursor: pointer;
     font-weight: 500;
     transition: background 0.2s ease;

@@ -15,6 +15,13 @@ export default function App() {
   const [hoveredImage, setHoveredImage] = useState<string | null>(null);
   const [previewPos, setPreviewPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
 
+  // Ajusta a altura do textarea conforme o conteúdo muda
+  const adjustTextareaHeight = (e: React.FormEvent<HTMLTextAreaElement>) => {
+    const textarea = e.currentTarget;
+    textarea.style.height = 'auto';
+    textarea.style.height = textarea.scrollHeight + 'px';
+  };
+
   useEffect(() => {
     const textarea = questionsRef.current;
     if (!textarea) return;
@@ -25,7 +32,7 @@ export default function App() {
 
       for (const item of items) {
         if (item.type.startsWith('image')) {
-          e.preventDefault(); // bloqueia a imagem de aparecer direto
+          e.preventDefault(); // impede a imagem de aparecer direto no textarea
 
           const file = item.getAsFile();
           if (!file) return;
@@ -37,6 +44,10 @@ export default function App() {
             imageMapRef.current[imageId] = base64;
             insertAtCursor(`[${imageId}]`);
             imageCounterRef.current += 1;
+
+            // Reajusta a altura após colar a tag da imagem
+            textarea.style.height = 'auto';
+            textarea.style.height = textarea.scrollHeight + 'px';
           };
           reader.readAsDataURL(file);
           break;
@@ -50,7 +61,6 @@ export default function App() {
     };
   }, []);
 
-
   const toggleModal = (type: 'info' | 'xml', isOpen: boolean) => {
     if (type === 'info') setShowInfo(isOpen);
     if (type === 'xml') setShowXml(isOpen);
@@ -61,7 +71,12 @@ export default function App() {
   };
 
   const escapeXML = (str: string) =>
-    str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&apos;');
+    str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
 
   const generateQuestionXML = (
     questionText: string,
@@ -76,7 +91,10 @@ export default function App() {
 
     let questionXML = `  <question type="multichoice">\n`;
     questionXML += `    <name><text>Q${count}</text></name>\n`;
-    questionXML += `    <questiontext format="html">\n      <text><![CDATA[${resolvedQuestionText.replace(/\n/g, '<br>')}]]></text>\n    </questiontext>\n`;
+    questionXML += `    <questiontext format="html">\n      <text><![CDATA[${resolvedQuestionText.replace(
+      /\n/g,
+      '<br>'
+    )}]]></text>\n    </questiontext>\n`;
     questionXML += `    <shuffleanswers>${shuffleAnswers ? '1' : '0'}</shuffleanswers>\n`;
 
     options.forEach((option) => {
@@ -90,7 +108,10 @@ export default function App() {
 
   const generateXML = () => {
     const inputText = questionsRef.current?.value || '';
-    const questionsArray = inputText.split('\n').map((line) => line.trim()).filter((line) => line !== '');
+    const questionsArray = inputText
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line !== '');
 
     let xmlOutput = '<?xml version="1.0" encoding="UTF-8"?>\n<quiz>\n';
     let questionCount = 1;
@@ -112,7 +133,7 @@ export default function App() {
           totalQuestions++;
           questionCount++;
         }
-        questionText = trimmedLine.slice(3).trim(); // só a pergunta
+        questionText = trimmedLine.slice(3).trim(); // só o texto da pergunta
         options = [];
         correctAnswer = '';
         isReadingAlternatives = false;
@@ -125,10 +146,7 @@ export default function App() {
           optionText = optionText.replace(/\{\s*(correto|correta)\s*\}/i, '').trim();
         }
         options.push({ letter: optionLetter, text: escapeXML(optionText) });
-      } else if (
-        isReadingAlternatives &&
-        /^[b-jB-J][).]\s+/.test(trimmedLine)
-      ) {
+      } else if (isReadingAlternatives && /^[b-jB-J][).]\s+/.test(trimmedLine)) {
         const optionLetter = trimmedLine[0].toLowerCase();
         let optionText = trimmedLine.slice(2).trim();
         if (/\{\s*(correto|correta)\s*\}/i.test(optionText)) {
@@ -141,8 +159,7 @@ export default function App() {
       }
     });
 
-
-    // Finaliza última questão
+    // Fecha a última questão pendente
     if (questionText) {
       xmlOutput += generateQuestionXML(questionText, options, correctAnswer, questionCount);
       if (!correctAnswer) semCorreta++;
@@ -154,7 +171,6 @@ export default function App() {
     setQuestionStats({ total: totalQuestions, semCorreta });
     toggleModal('xml', true);
   };
-
 
   const copyText = () => {
     navigator.clipboard
@@ -182,6 +198,13 @@ export default function App() {
       imageMapRef.current[imageId] = base64;
       insertAtCursor(`[${imageId}]`);
       imageCounterRef.current += 1;
+
+      // Reajusta a altura depois de inserir a tag da imagem
+      const textarea = questionsRef.current;
+      if (textarea) {
+        textarea.style.height = 'auto';
+        textarea.style.height = textarea.scrollHeight + 'px';
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -203,12 +226,13 @@ export default function App() {
     const textarea = questionsRef.current;
     if (!textarea) return;
 
-
     const pos = textarea.selectionStart;
-
     const content = textarea.value;
     const match = content.match(/\[imagem(\d+)\]/gi);
-    if (!match) return setHoveredImage(null);
+    if (!match) {
+      setHoveredImage(null);
+      return;
+    }
 
     for (const tag of match) {
       const index = content.indexOf(tag);
@@ -241,20 +265,22 @@ export default function App() {
             ref={questionsRef}
             placeholder="Digite suas questões aqui..."
             onMouseMove={handleMouseMove}
+            onInput={adjustTextareaHeight}
           />
         </S.QuestionContainer>
 
         {hoveredImage && (
           <S.ImagePreview style={{ top: previewPos.top, left: previewPos.left }}>
-            <img src={hoveredImage} alt="Preview" style={{ maxWidth: 200, maxHeight: 200 }} />
+            <img
+              src={hoveredImage}
+              alt="Preview"
+              style={{ maxWidth: 200, maxHeight: 200 }}
+            />
           </S.ImagePreview>
         )}
 
-
         <S.ImageUploadContainer>
-          <label htmlFor="image-upload">
-            Inserir Imagem
-          </label>
+          <label htmlFor="image-upload">Inserir Imagem</label>
           <input
             id="image-upload"
             type="file"
@@ -262,7 +288,6 @@ export default function App() {
             onChange={handleImageUpload}
           />
         </S.ImageUploadContainer>
-
 
         <S.CheckboxContainer>
           <label>
@@ -275,7 +300,6 @@ export default function App() {
           </label>
         </S.CheckboxContainer>
 
-
         <S.Button onClick={generateXML}>Gerar XML</S.Button>
       </S.Container>
 
@@ -283,19 +307,17 @@ export default function App() {
         <S.Modal visible={showInfo} onClick={(e) => closeModal(e, 'info')}>
           <S.ModalContent>
             <h3>Como Utilizar o Sistema</h3>
-            <p style={{ marginBottom: 0 }}>Este sistema permite gerar questões no formato XML compatível com o Moodle. Para utilizá-lo corretamente, siga as instruções abaixo:</p>
+            <p style={{ marginBottom: 0 }}>
+              Este sistema permite gerar questões no formato XML compatível com o Moodle. Para utilizá-lo corretamente, siga as instruções abaixo:
+            </p>
             <ul>
               <li>Digite suas questões no campo de texto, utilizando uma linha para cada pergunta.</li>
               <li>Cada questão deve começar com a numeração sequencial, como <strong>1.</strong>, <strong>2.</strong>, etc.</li>
-              {/* <li>Antes de listar as alternativas, adicione uma linha com <strong>ALTERNATIVAS:</strong> para separar o enunciado das opções.</li> */}
               <li>Inclua as alternativas utilizando letras de <strong>a)</strong> em diante. Você pode usar quantas alternativas desejar, desde que cada uma siga o formato <code>a)</code>, <code>b)</code>, <code>c)</code>, etc.</li>
-
               <li>Marque a alternativa correta com <code>{'{correta}'}</code> ou <code>{'{correto}'}</code>.</li>
             </ul>
-
             <S.ModalPre>
               1. Qual é a capital do Brasil?<br />
-              {/* ALTERNATIVAS:<br /> */}
               a) São Paulo<br />
               b) Rio de Janeiro<br />
               c) Brasília <strong>{'{correta}'}</strong><br />
@@ -303,7 +325,6 @@ export default function App() {
               e) Belo Horizonte<br /><br />
 
               2. Qual é a capital do estado do Ceará?<br />
-              {/* ALTERNATIVAS:<br /> */}
               a) Sobral<br />
               b) Juazeiro do Norte<br />
               c) Crato<br />
@@ -321,7 +342,9 @@ export default function App() {
             <h3>XML Gerado:</h3>
             <p>
               ✅ {questionStats.total} Questões Geradas!
-              {questionStats.semCorreta > 0 && <> | ⚠️ {questionStats.semCorreta} Questões sem Alternativa Correta</>}
+              {questionStats.semCorreta > 0 && (
+                <> | ⚠️ {questionStats.semCorreta} Questões sem Alternativa Correta</>
+              )}
             </p>
             <div className="actions">
               <S.Button onClick={copyText}>Copiar Texto</S.Button>
