@@ -126,14 +126,16 @@ export default function App() {
     questionsArray.forEach((line) => {
       const trimmedLine = line.trim();
 
-      if (/^\d+[.)]/.test(trimmedLine)) {
+      if (/^(QUEST[ÃA]O\s*\d+|\d+[.)])/.test(trimmedLine.toUpperCase())) {
+
         if (questionText) {
           xmlOutput += generateQuestionXML(questionText, options, correctAnswer, questionCount);
           if (!correctAnswer) semCorreta++;
           totalQuestions++;
           questionCount++;
         }
-        questionText = trimmedLine.slice(3).trim(); // só o texto da pergunta
+        questionText = trimmedLine.replace(/^(QUEST[ÃA]O\s*\d+|\d+[.)])/, '').trim();
+        // só o texto da pergunta
         options = [];
         correctAnswer = '';
         isReadingAlternatives = false;
