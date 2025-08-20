@@ -1,13 +1,18 @@
+// src/App.tsx
+
 import { useState, useRef, useEffect } from 'react';
+import { Question, parseTextToQuestions, generateMoodleXML } from './xmlParser';
 import * as S from './styles';
 
 export default function App() {
-  const [xmlContent, setXmlContent] = useState('');
-  const [showInfo, setShowInfo] = useState(false);
-  const [showXml, setShowXml] = useState(false);
-  const [shuffleAnswers, setShuffleAnswers] = useState(false);
+  const [xmlContent, setXmlContent] = useState<string>('');
+  const [showInfo, setShowInfo] = useState<boolean>(false);
+  const [showXml, setShowXml] = useState<boolean>(false);
+  const [shuffleAnswers, setShuffleAnswers] = useState<boolean>(false);
   const questionsRef = useRef<HTMLTextAreaElement>(null);
-  const [questionStats, setQuestionStats] = useState({ total: 0, semCorreta: 0 });
+
+  // Estado de estatísticas atualizado para lidar com a lista de avisos
+  const [questionStats, setQuestionStats] = useState<{ total: number; issues: string[] }>({ total: 0, issues: [] });
 
   const imageMapRef = useRef<{ [key: string]: string }>({});
   const imageCounterRef = useRef<number>(1);
@@ -15,11 +20,10 @@ export default function App() {
   const [hoveredImage, setHoveredImage] = useState<string | null>(null);
   const [previewPos, setPreviewPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
 
-  // Ajusta a altura do textarea conforme o conteúdo muda
   const adjustTextareaHeight = (e: React.FormEvent<HTMLTextAreaElement>) => {
     const textarea = e.currentTarget;
     textarea.style.height = 'auto';
-    textarea.style.height = textarea.scrollHeight + 'px';
+    textarea.style.height = `${textarea.scrollHeight}px`;
   };
 
   useEffect(() => {
@@ -32,8 +36,7 @@ export default function App() {
 
       for (const item of items) {
         if (item.type.startsWith('image')) {
-          e.preventDefault(); // impede a imagem de aparecer direto no textarea
-
+          e.preventDefault();
           const file = item.getAsFile();
           if (!file) return;
 
@@ -45,9 +48,8 @@ export default function App() {
             insertAtCursor(`[${imageId}]`);
             imageCounterRef.current += 1;
 
-            // Reajusta a altura após colar a tag da imagem
             textarea.style.height = 'auto';
-            textarea.style.height = textarea.scrollHeight + 'px';
+            textarea.style.height = `${textarea.scrollHeight}px`;
           };
           reader.readAsDataURL(file);
           break;
@@ -70,107 +72,33 @@ export default function App() {
     if (e.target === e.currentTarget) toggleModal(type, false);
   };
 
-  const escapeXML = (str: string) =>
-    str
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&apos;');
-
-  const generateQuestionXML = (
-    questionText: string,
-    options: { letter: string; text: string }[],
-    correctAnswer: string,
-    count: number
-  ) => {
-    const resolvedQuestionText = questionText.replace(/\[imagem(\d+)\]/gi, (_, num) => {
-      const key = `imagem${num}`;
-      return imageMapRef.current[key] ? `<img src="${imageMapRef.current[key]}" /><br>` : `[imagem${num}]`;
-    });
-
-    let questionXML = `  <question type="multichoice">\n`;
-    questionXML += `    <name><text>Q${count}</text></name>\n`;
-    questionXML += `    <questiontext format="html">\n      <text><![CDATA[${resolvedQuestionText.replace(
-      /\n/g,
-      '<br>'
-    )}]]></text>\n    </questiontext>\n`;
-    questionXML += `    <shuffleanswers>${shuffleAnswers ? '1' : '0'}</shuffleanswers>\n`;
-
-    options.forEach((option) => {
-      const fraction = option.letter === correctAnswer ? '100' : '0';
-      questionXML += `    <answer fraction="${fraction}"><text>${option.text}</text></answer>\n`;
-    });
-
-    questionXML += `  </question>\n`;
-    return questionXML;
-  };
-
   const generateXML = () => {
     const inputText = questionsRef.current?.value || '';
-    const questionsArray = inputText
-      .split('\n')
-      .map((line) => line.trim())
-      .filter((line) => line !== '');
 
-    let xmlOutput = '<?xml version="1.0" encoding="UTF-8"?>\n<quiz>\n';
-    let questionCount = 1;
-    let questionText = '';
-    let options: { letter: string; text: string }[] = [];
-    let correctAnswer = '';
-    let isReadingAlternatives = false;
+    const parsedQuestions: Question[] = parseTextToQuestions(inputText);
 
-    let totalQuestions = 0;
-    let semCorreta = 0;
-
-    questionsArray.forEach((line) => {
-      const trimmedLine = line.trim();
-
-      if (/^(QUEST[ÃA]O\s*\d+|\d+[.)])/.test(trimmedLine.toUpperCase())) {
-
-        if (questionText) {
-          xmlOutput += generateQuestionXML(questionText, options, correctAnswer, questionCount);
-          if (!correctAnswer) semCorreta++;
-          totalQuestions++;
-          questionCount++;
-        }
-        questionText = trimmedLine.replace(/^(QUEST[ÃA]O\s*\d+|\d+[.)])/, '').trim();
-        // só o texto da pergunta
-        options = [];
-        correctAnswer = '';
-        isReadingAlternatives = false;
-      } else if (/^[aA][).]\s+/.test(trimmedLine)) {
-        isReadingAlternatives = true;
-        const optionLetter = trimmedLine[0].toLowerCase();
-        let optionText = trimmedLine.slice(2).trim();
-        if (/\{\s*(correto|correta)\s*\}/i.test(optionText)) {
-          correctAnswer = optionLetter;
-          optionText = optionText.replace(/\{\s*(correto|correta)\s*\}/i, '').trim();
-        }
-        options.push({ letter: optionLetter, text: escapeXML(optionText) });
-      } else if (isReadingAlternatives && /^[b-jB-J][).]\s+/.test(trimmedLine)) {
-        const optionLetter = trimmedLine[0].toLowerCase();
-        let optionText = trimmedLine.slice(2).trim();
-        if (/\{\s*(correto|correta)\s*\}/i.test(optionText)) {
-          correctAnswer = optionLetter;
-          optionText = optionText.replace(/\{\s*(correto|correta)\s*\}/i, '').trim();
-        }
-        options.push({ letter: optionLetter, text: escapeXML(optionText) });
-      } else if (!isReadingAlternatives) {
-        questionText += (questionText ? '\n' : '') + trimmedLine;
+    // Lógica para gerar a lista de avisos
+    const issues: string[] = [];
+    parsedQuestions.forEach((q) => {
+      if (!q.correctAnswer) {
+        issues.push(`A questão "${q.identifier}" está sem alternativa correta.`);
       }
     });
 
-    // Fecha a última questão pendente
-    if (questionText) {
-      xmlOutput += generateQuestionXML(questionText, options, correctAnswer, questionCount);
-      if (!correctAnswer) semCorreta++;
-      totalQuestions++;
-    }
+    // Resolve as imagens, modificando os objetos de questão
+    parsedQuestions.forEach(q => {
+      q.questionText = q.questionText.replace(/\[(imagem\d+)\]/gi, (match, imageId: string) => {
+        const base64 = imageMapRef.current[imageId];
+        return base64 ? `<img src="${base64}" /><br>` : match;
+      });
+    });
 
-    xmlOutput += '</quiz>';
-    setXmlContent(xmlOutput);
-    setQuestionStats({ total: totalQuestions, semCorreta });
+    const finalXml = generateMoodleXML(parsedQuestions, shuffleAnswers);
+    setXmlContent(finalXml);
+
+    // Atualiza o estado com a nova estrutura de estatísticas
+    setQuestionStats({ total: parsedQuestions.length, issues });
+
     toggleModal('xml', true);
   };
 
@@ -201,11 +129,10 @@ export default function App() {
       insertAtCursor(`[${imageId}]`);
       imageCounterRef.current += 1;
 
-      // Reajusta a altura depois de inserir a tag da imagem
       const textarea = questionsRef.current;
       if (textarea) {
         textarea.style.height = 'auto';
-        textarea.style.height = textarea.scrollHeight + 'px';
+        textarea.style.height = `${textarea.scrollHeight}px`;
       }
     };
     reader.readAsDataURL(file);
@@ -225,29 +152,25 @@ export default function App() {
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLTextAreaElement>) => {
-    const textarea = questionsRef.current;
-    if (!textarea) return;
-
+    const textarea = e.currentTarget;
     const pos = textarea.selectionStart;
     const content = textarea.value;
-    const match = content.match(/\[imagem(\d+)\]/gi);
-    if (!match) {
-      setHoveredImage(null);
-      return;
-    }
 
-    for (const tag of match) {
-      const index = content.indexOf(tag);
-      const rangeStart = index;
-      const rangeEnd = index + tag.length;
+    const regex = /\[imagem(\d+)\]/gi;
+    let match;
+
+    while ((match = regex.exec(content)) !== null) {
+      const tag = match[0];
+      const key = tag.replace(/\[|\]/g, '');
+      const rangeStart = match.index;
+      const rangeEnd = rangeStart + tag.length;
 
       if (pos >= rangeStart && pos <= rangeEnd) {
-        const key = tag.replace('[', '').replace(']', '');
         if (imageMapRef.current[key]) {
           setHoveredImage(imageMapRef.current[key]);
           setPreviewPos({ top: e.clientY + 10, left: e.clientX + 10 });
+          return;
         }
-        return;
       }
     }
 
@@ -342,12 +265,19 @@ export default function App() {
         <S.Modal visible={showXml} onClick={(e) => closeModal(e, 'xml')}>
           <S.ModalContent>
             <h3>XML Gerado:</h3>
-            <p>
-              ✅ {questionStats.total} Questões Geradas!
-              {questionStats.semCorreta > 0 && (
-                <> | ⚠️ {questionStats.semCorreta} Questões sem Alternativa Correta</>
-              )}
-            </p>
+            <p>✅ {questionStats.total} Questões Geradas!</p>
+
+            {questionStats.issues.length > 0 && (
+              <S.WarningBox>
+                <h4>⚠️ Pontos de Atenção</h4>
+                <ul>
+                  {questionStats.issues.map((issue, index) => (
+                    <li key={index}>{issue}</li>
+                  ))}
+                </ul>
+              </S.WarningBox>
+            )}
+
             <div className="actions">
               <S.Button onClick={copyText}>Copiar Texto</S.Button>
               <S.Button onClick={downloadXML}>Baixar XML</S.Button>

@@ -278,3 +278,26 @@ export const ImageUploadContainer = styled.div`
     display: none;
   }
 `;
+
+// Em seu arquivo de styled-components (ex: styles.ts)
+
+// ... (outros estilos)
+
+export const WarningBox = styled.div`
+  background-color: #fffbe6;
+  border: 1px solid #ffe58f;
+  border-radius: 4px;
+  padding: 8px 16px;
+  margin-top: 16px;
+  font-size: 0.9em;
+
+  h4 {
+    margin-top: 0;
+    color: #faad14;
+  }
+
+  ul {
+    padding-left: 20px;
+    margin-bottom: 0;
+  }
+`;
