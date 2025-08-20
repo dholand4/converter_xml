@@ -1,20 +1,15 @@
-// src/logic/xmlParser.ts
-
-// --- Definição das Tipagens ---
-
 export interface Option {
     letter: string;
     text: string;
 }
 
 export interface Question {
-    identifier: string; // <-- NOVA PROPRIEDADE! (Ex: "1.", "Questão 2")
+    identifier: string;
     questionText: string;
     options: Option[];
     correctAnswer: string;
 }
 
-// A função escapeXML continua a mesma...
 const escapeXML = (str: string): string =>
     str
         .replace(/&/g, '&amp;')
@@ -23,7 +18,6 @@ const escapeXML = (str: string): string =>
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&apos;');
 
-// --- LÓGICA ATUALIZADA ---
 function parseQuestionBlock(blockText: string, index: number): Question | null { // Adicionamos 'index' como fallback
     const lines = blockText.trim().split('\n').filter(line => line.trim() !== '');
     if (lines.length === 0) {
@@ -38,7 +32,6 @@ function parseQuestionBlock(blockText: string, index: number): Question | null {
     const questionHeaderRegex = /^(QUEST[ÃA]O\s*\d+|\d+[.)])/i;
     const optionRegex = /^([a-jA-J])[.)]\s+/;
 
-    // --- NOVA LÓGICA PARA CAPTURAR O IDENTIFICADOR ---
     const headerMatch = lines[0].match(questionHeaderRegex);
     const identifier = headerMatch ? headerMatch[0] : `Questão ${index + 1}`; // Usa o número da questão se não encontrar um título
 
@@ -65,7 +58,6 @@ function parseQuestionBlock(blockText: string, index: number): Question | null {
     }
 
     if (questionText && options.length > 0) {
-        // Adiciona o identificador ao objeto retornado
         return { identifier, questionText, options, correctAnswer };
     }
 
@@ -81,9 +73,7 @@ export function parseTextToQuestions(inputText: string): Question[] {
         .filter((question): question is Question => question !== null);
 }
 
-// A função generateMoodleXML continua exatamente a mesma...
 export function generateMoodleXML(questions: Question[], shuffle: boolean): string {
-    // (Nenhuma mudança necessária aqui)
     let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<quiz>\n';
     questions.forEach((question, index) => {
         const questionTextWithBreaks = question.questionText.replace(/\n/g, '<br>');

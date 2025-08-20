@@ -3,6 +3,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { Question, parseTextToQuestions, generateMoodleXML } from './xmlParser';
 import * as S from './styles';
+import InfoModal from '../../components/InfoModal';
+import XmlOutputModal from '../../components/XmlOutputModal';
 
 export default function App() {
   const [xmlContent, setXmlContent] = useState<string>('');
@@ -10,8 +12,6 @@ export default function App() {
   const [showXml, setShowXml] = useState<boolean>(false);
   const [shuffleAnswers, setShuffleAnswers] = useState<boolean>(false);
   const questionsRef = useRef<HTMLTextAreaElement>(null);
-
-  // Estado de estatísticas atualizado para lidar com a lista de avisos
   const [questionStats, setQuestionStats] = useState<{ total: number; issues: string[] }>({ total: 0, issues: [] });
 
   const imageMapRef = useRef<{ [key: string]: string }>({});
@@ -33,13 +33,11 @@ export default function App() {
     const handlePaste = (e: ClipboardEvent) => {
       const items = e.clipboardData?.items;
       if (!items) return;
-
       for (const item of items) {
         if (item.type.startsWith('image')) {
           e.preventDefault();
           const file = item.getAsFile();
           if (!file) return;
-
           const reader = new FileReader();
           reader.onloadend = () => {
             const base64 = reader.result as string;
@@ -48,8 +46,12 @@ export default function App() {
             insertAtCursor(`[${imageId}]`);
             imageCounterRef.current += 1;
 
-            textarea.style.height = 'auto';
-            textarea.style.height = `${textarea.scrollHeight}px`;
+            // CORREÇÃO APLICADA AQUI
+            const currentTextarea = questionsRef.current;
+            if (currentTextarea) {
+              currentTextarea.style.height = 'auto';
+              currentTextarea.style.height = `${currentTextarea.scrollHeight}px`;
+            }
           };
           reader.readAsDataURL(file);
           break;
@@ -58,9 +60,7 @@ export default function App() {
     };
 
     textarea.addEventListener('paste', handlePaste as EventListener);
-    return () => {
-      textarea.removeEventListener('paste', handlePaste as EventListener);
-    };
+    return () => textarea.removeEventListener('paste', handlePaste as EventListener);
   }, []);
 
   const toggleModal = (type: 'info' | 'xml', isOpen: boolean) => {
@@ -68,16 +68,10 @@ export default function App() {
     if (type === 'xml') setShowXml(isOpen);
   };
 
-  const closeModal = (e: React.MouseEvent<HTMLDivElement>, type: 'info' | 'xml') => {
-    if (e.target === e.currentTarget) toggleModal(type, false);
-  };
-
   const generateXML = () => {
     const inputText = questionsRef.current?.value || '';
-
     const parsedQuestions: Question[] = parseTextToQuestions(inputText);
 
-    // Lógica para gerar a lista de avisos
     const issues: string[] = [];
     parsedQuestions.forEach((q) => {
       if (!q.correctAnswer) {
@@ -85,7 +79,6 @@ export default function App() {
       }
     });
 
-    // Resolve as imagens, modificando os objetos de questão
     parsedQuestions.forEach(q => {
       q.questionText = q.questionText.replace(/\[(imagem\d+)\]/gi, (match, imageId: string) => {
         const base64 = imageMapRef.current[imageId];
@@ -95,16 +88,12 @@ export default function App() {
 
     const finalXml = generateMoodleXML(parsedQuestions, shuffleAnswers);
     setXmlContent(finalXml);
-
-    // Atualiza o estado com a nova estrutura de estatísticas
     setQuestionStats({ total: parsedQuestions.length, issues });
-
     toggleModal('xml', true);
   };
 
   const copyText = () => {
-    navigator.clipboard
-      .writeText(xmlContent)
+    navigator.clipboard.writeText(xmlContent)
       .then(() => alert('Texto copiado para a área de transferência!'))
       .catch((err) => console.error('Erro ao copiar:', err));
   };
@@ -120,7 +109,6 @@ export default function App() {
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64 = reader.result as string;
@@ -129,10 +117,10 @@ export default function App() {
       insertAtCursor(`[${imageId}]`);
       imageCounterRef.current += 1;
 
-      const textarea = questionsRef.current;
-      if (textarea) {
-        textarea.style.height = 'auto';
-        textarea.style.height = `${textarea.scrollHeight}px`;
+      const currentTextarea = questionsRef.current;
+      if (currentTextarea) {
+        currentTextarea.style.height = 'auto';
+        currentTextarea.style.height = `${currentTextarea.scrollHeight}px`;
       }
     };
     reader.readAsDataURL(file);
@@ -141,11 +129,9 @@ export default function App() {
   const insertAtCursor = (text: string) => {
     const textarea = questionsRef.current;
     if (!textarea) return;
-
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const currentText = textarea.value;
-
     textarea.value = currentText.substring(0, start) + text + currentText.substring(end);
     textarea.selectionStart = textarea.selectionEnd = start + text.length;
     textarea.focus();
@@ -155,16 +141,13 @@ export default function App() {
     const textarea = e.currentTarget;
     const pos = textarea.selectionStart;
     const content = textarea.value;
-
     const regex = /\[imagem(\d+)\]/gi;
     let match;
-
     while ((match = regex.exec(content)) !== null) {
       const tag = match[0];
       const key = tag.replace(/\[|\]/g, '');
       const rangeStart = match.index;
       const rangeEnd = rangeStart + tag.length;
-
       if (pos >= rangeStart && pos <= rangeEnd) {
         if (imageMapRef.current[key]) {
           setHoveredImage(imageMapRef.current[key]);
@@ -173,7 +156,6 @@ export default function App() {
         }
       }
     }
-
     setHoveredImage(null);
   };
 
@@ -188,7 +170,7 @@ export default function App() {
         <S.QuestionContainer>
           <S.Textarea
             ref={questionsRef}
-            placeholder="Digite suas questões aqui..."
+            placeholder="Digite ou cole suas questões aqui... Você pode colar imagens diretamente no texto!"
             onMouseMove={handleMouseMove}
             onInput={adjustTextareaHeight}
           />
@@ -196,96 +178,49 @@ export default function App() {
 
         {hoveredImage && (
           <S.ImagePreview style={{ top: previewPos.top, left: previewPos.left }}>
-            <img
-              src={hoveredImage}
-              alt="Preview"
-              style={{ maxWidth: 200, maxHeight: 200 }}
-            />
+            <img src={hoveredImage} alt="Preview" style={{ maxWidth: 200, maxHeight: 200 }} />
           </S.ImagePreview>
         )}
 
-        <S.ImageUploadContainer>
-          <label htmlFor="image-upload">Inserir Imagem</label>
-          <input
-            id="image-upload"
-            type="file"
-            accept="image/*"
-            onChange={handleImageUpload}
-          />
-        </S.ImageUploadContainer>
-
-        <S.CheckboxContainer>
-          <label>
+        <S.ActionsContainer>
+          <S.ImageUploadContainer>
+            <label htmlFor="image-upload">Inserir Imagem do Computador</label>
             <input
+              id="image-upload"
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+            />
+          </S.ImageUploadContainer>
+
+          <S.CheckboxContainer>
+            <input
+              id="shuffle"
               type="checkbox"
               checked={shuffleAnswers}
               onChange={() => setShuffleAnswers(!shuffleAnswers)}
             />
-            Embaralhar Alternativas?
-          </label>
-        </S.CheckboxContainer>
+            <label htmlFor="shuffle">Embaralhar Alternativas?</label>
+          </S.CheckboxContainer>
 
-        <S.Button onClick={generateXML}>Gerar XML</S.Button>
+          <S.Button onClick={generateXML}>Gerar XML</S.Button>
+        </S.ActionsContainer>
+
       </S.Container>
 
-      {showInfo && (
-        <S.Modal visible={showInfo} onClick={(e) => closeModal(e, 'info')}>
-          <S.ModalContent>
-            <h3>Como Utilizar o Sistema</h3>
-            <p style={{ marginBottom: 0 }}>
-              Este sistema permite gerar questões no formato XML compatível com o Moodle. Para utilizá-lo corretamente, siga as instruções abaixo:
-            </p>
-            <ul>
-              <li>Digite suas questões no campo de texto, utilizando uma linha para cada pergunta.</li>
-              <li>Cada questão deve começar com a numeração sequencial, como <strong>1.</strong>, <strong>2.</strong>, etc.</li>
-              <li>Inclua as alternativas utilizando letras de <strong>a)</strong> em diante. Você pode usar quantas alternativas desejar, desde que cada uma siga o formato <code>a)</code>, <code>b)</code>, <code>c)</code>, etc.</li>
-              <li>Marque a alternativa correta com <code>{'{correta}'}</code> ou <code>{'{correto}'}</code>.</li>
-            </ul>
-            <S.ModalPre>
-              1. Qual é a capital do Brasil?<br />
-              a) São Paulo<br />
-              b) Rio de Janeiro<br />
-              c) Brasília <strong>{'{correta}'}</strong><br />
-              d) Salvador<br />
-              e) Belo Horizonte<br /><br />
+      <InfoModal
+        visible={showInfo}
+        onClose={() => toggleModal('info', false)}
+      />
 
-              2. Qual é a capital do estado do Ceará?<br />
-              a) Sobral<br />
-              b) Juazeiro do Norte<br />
-              c) Crato<br />
-              d) Fortaleza <strong>{'{correto}'}</strong><br />
-              e) Quixadá<br />
-            </S.ModalPre>
-            <p>Após inserir todas as questões, clique no botão <strong>"Gerar XML"</strong>.</p>
-          </S.ModalContent>
-        </S.Modal>
-      )}
-
-      {showXml && (
-        <S.Modal visible={showXml} onClick={(e) => closeModal(e, 'xml')}>
-          <S.ModalContent>
-            <h3>XML Gerado:</h3>
-            <p>✅ {questionStats.total} Questões Geradas!</p>
-
-            {questionStats.issues.length > 0 && (
-              <S.WarningBox>
-                <h4>⚠️ Pontos de Atenção</h4>
-                <ul>
-                  {questionStats.issues.map((issue, index) => (
-                    <li key={index}>{issue}</li>
-                  ))}
-                </ul>
-              </S.WarningBox>
-            )}
-
-            <div className="actions">
-              <S.Button onClick={copyText}>Copiar Texto</S.Button>
-              <S.Button onClick={downloadXML}>Baixar XML</S.Button>
-            </div>
-            <S.XmlBox>{xmlContent}</S.XmlBox>
-          </S.ModalContent>
-        </S.Modal>
-      )}
+      <XmlOutputModal
+        visible={showXml}
+        onClose={() => toggleModal('xml', false)}
+        stats={questionStats}
+        xmlContent={xmlContent}
+        onCopy={copyText}
+        onDownload={downloadXML}
+      />
 
       <S.Footer>
         <p>Daniel Holanda © 2025</p>
