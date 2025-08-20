@@ -1,5 +1,3 @@
-// src/App.tsx
-
 import { useState, useRef, useEffect } from 'react';
 import { Question, parseTextToQuestions, generateMoodleXML } from './xmlParser';
 import * as S from './styles';
@@ -46,7 +44,6 @@ export default function App() {
             insertAtCursor(`[${imageId}]`);
             imageCounterRef.current += 1;
 
-            // CORREÇÃO APLICADA AQUI
             const currentTextarea = questionsRef.current;
             if (currentTextarea) {
               currentTextarea.style.height = 'auto';
@@ -184,7 +181,7 @@ export default function App() {
 
         <S.ActionsContainer>
           <S.ImageUploadContainer>
-            <label htmlFor="image-upload">Inserir Imagem do Computador</label>
+            <label htmlFor="image-upload">Inserir Imagem</label>
             <input
               id="image-upload"
               type="file"

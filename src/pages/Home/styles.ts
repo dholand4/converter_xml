@@ -136,7 +136,7 @@ export const Footer = styled.footer`
   width: 100%;
   font-size: 0.9em;
   font-weight: 500;
-  margin-top: -15px;
+  margin-top: -60px;
 `;
 
 export const ImagePreview = styled.div`
