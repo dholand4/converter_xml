@@ -10,6 +10,10 @@ export interface Question {
     correctAnswer: string;
 }
 
+const formatBoldText = (text: string): string => {
+    return text.replace(/\*(.*?)\*/g, '<strong>$1</strong>');
+};
+
 const escapeXML = (str: string): string =>
     str
         .replace(/&/g, '&amp;')
@@ -18,59 +22,76 @@ const escapeXML = (str: string): string =>
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&apos;');
 
-function parseQuestionBlock(blockText: string, index: number): Question | null { // Adicionamos 'index' como fallback
-    const lines = blockText.trim().split('\n').filter(line => line.trim() !== '');
-    if (lines.length === 0) {
-        return null;
-    }
+export function parseTextToQuestions(inputText: string): Question[] {
+    const questions: Question[] = [];
+    if (!inputText) return questions;
 
-    let questionText = '';
-    const options: Option[] = [];
-    let correctAnswer = '';
-    let isReadingAlternatives = false;
+    const lines = inputText.trim().split('\n');
 
-    const questionHeaderRegex = /^(QUEST[ÃA]O\s*\d+|\d+[.)])/i;
-    const optionRegex = /^([a-jA-J])[.)]\s+/;
+    let currentQuestion: Partial<Question> & { textBuffer?: string[] } = {};
+    let questionCounter = 0;
 
-    const headerMatch = lines[0].match(questionHeaderRegex);
-    const identifier = headerMatch ? headerMatch[0] : `Questão ${index + 1}`; // Usa o número da questão se não encontrar um título
+    const headerRegex = /^(?:QUEST[ÃA]O\s*)?\d+[.-]/i;
+    const optionRegex = /^([a-hA-H])[.)]\s+/;
 
-    questionText = lines[0].replace(questionHeaderRegex, '').trim();
+    const finalizeQuestion = () => {
+        if (currentQuestion.textBuffer && currentQuestion.options && currentQuestion.options.length > 0) {
+            const rawText = currentQuestion.textBuffer.join('\n').trim();
+            const formattedText = formatBoldText(rawText);
 
-    for (let i = 1; i < lines.length; i++) {
-        const line = lines[i].trim();
-        const optionMatch = line.match(optionRegex);
+            questions.push({
+                identifier: currentQuestion.identifier!,
+                questionText: formattedText,
+                options: currentQuestion.options.map(opt => ({
+                    ...opt,
+                    text: escapeXML(formatBoldText(opt.text))
+                })),
+                correctAnswer: currentQuestion.correctAnswer || '',
+            });
+            currentQuestion = {};
+        }
+    };
 
-        if (optionMatch) {
-            isReadingAlternatives = true;
+    for (const line of lines) {
+        const trimmedLine = line.trim();
+        if (!trimmedLine) continue;
+
+        const isHeader = headerRegex.test(trimmedLine);
+        const optionMatch = trimmedLine.match(optionRegex);
+
+        if (isHeader) {
+            finalizeQuestion();
+
+            questionCounter++;
+            const questionBody = trimmedLine.replace(headerRegex, '').trim();
+
+            currentQuestion = {
+                identifier: `Q${questionCounter}`,
+                textBuffer: [questionBody],
+                options: [],
+                correctAnswer: '',
+            };
+        } else if (optionMatch) {
+            if (!currentQuestion.textBuffer) continue;
+
             const letter = optionMatch[1].toLowerCase();
-            let text = line.replace(optionRegex, '').trim();
+            let text = trimmedLine.replace(optionRegex, '').trim();
 
             if (/\{\s*(correto|correta)\s*\}/i.test(text)) {
-                correctAnswer = letter;
+                currentQuestion.correctAnswer = letter;
                 text = text.replace(/\{\s*(correto|correta)\s*\}/i, '').trim();
             }
 
-            options.push({ letter, text: escapeXML(text) });
-        } else if (!isReadingAlternatives) {
-            questionText += `\n${line}`;
+            currentQuestion.options?.push({ letter, text });
+
+        } else if (currentQuestion.textBuffer) {
+            currentQuestion.textBuffer.push(trimmedLine);
         }
     }
 
-    if (questionText && options.length > 0) {
-        return { identifier, questionText, options, correctAnswer };
-    }
+    finalizeQuestion();
 
-    return null;
-}
-
-export function parseTextToQuestions(inputText: string): Question[] {
-    const questionBlocks = inputText.trim().split(/\n(?=QUEST[ÃA]O\s*\d+|\d+[.)])/i);
-
-    return questionBlocks
-        // Passamos o 'index' para o parseQuestionBlock
-        .map((block, index) => parseQuestionBlock(block, index))
-        .filter((question): question is Question => question !== null);
+    return questions;
 }
 
 export function generateMoodleXML(questions: Question[], shuffle: boolean): string {
@@ -78,14 +99,14 @@ export function generateMoodleXML(questions: Question[], shuffle: boolean): stri
     questions.forEach((question, index) => {
         const questionTextWithBreaks = question.questionText.replace(/\n/g, '<br>');
         xml += `  <question type="multichoice">\n`;
-        xml += `    <name><text>${question.identifier || `Q${index + 1}`}</text></name>\n`; // Podemos usar o identifier aqui também!
+        xml += `    <name><text>${question.identifier || `Q${index + 1}`}</text></name>\n`;
         xml += `    <questiontext format="html">\n`;
-        xml += `      <text><![CDATA[${questionTextWithBreaks}]]></text>\n`;
+        xml += `      <text><![CDATA[<p>${questionTextWithBreaks}</p>]]></text>\n`;
         xml += `    </questiontext>\n`;
         xml += `    <shuffleanswers>${shuffle ? '1' : '0'}</shuffleanswers>\n`;
         question.options.forEach(option => {
             const fraction = option.letter === question.correctAnswer ? '100' : '0';
-            xml += `    <answer fraction="${fraction}"><text>${option.text}</text></answer>\n`;
+            xml += `    <answer fraction="${fraction}" format="html"><text><![CDATA[<p>${option.text}</p>]]></text></answer>\n`;
         });
         xml += `  </question>\n`;
     });
