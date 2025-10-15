@@ -31,7 +31,7 @@ export function parseTextToQuestions(inputText: string): Question[] {
     let currentQuestion: Partial<Question> & { textBuffer?: string[] } = {};
     let questionCounter = 0;
 
-    const headerRegex = /^(?:QUEST[ÃA]O\s*)?\d+[.-]/i;
+    const headerRegex = /^(?:quest[ãa]o\s*)?\d+\s*[.-]?\s*/i;
     const optionRegex = /^([a-hA-H])[.)]\s+/;
 
     const finalizeQuestion = () => {
